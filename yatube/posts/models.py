@@ -52,7 +52,7 @@ class Post(CreatedModel):
         verbose_name_plural = 'посты'
 
     def __str__(self) -> str:
-        return f'Пост {self.pk}: {truncate(self.text, TRUNCATION)}'
+        return truncate(self.text, TRUNCATION)
 
 
 class Comment(CreatedModel):

@@ -12,7 +12,7 @@ class PostModelTest(TestCase):
         post = mixer.blend(Post)
         self.assertEqual(
             str(post),
-            f'Пост {post.pk}: {truncate(post.text, TRUNCATION)}',
+            truncate(post.text, TRUNCATION),
             'Неверное поле __str__ объекта поста',
         )
 

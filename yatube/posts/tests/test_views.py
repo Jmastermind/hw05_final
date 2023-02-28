@@ -1,11 +1,12 @@
 from django import forms
-from django.core.cache import cache
 from django.test import Client, TestCase
 from django.urls import reverse
 from mixer.backend.django import mixer
 
 from posts.models import Follow, Group, Post, User
 from yatube.settings import PAGINATION
+
+# from django.core.cache import cache
 
 
 class YatubePagesTests(TestCase):
@@ -335,7 +336,8 @@ class FollowViewTest(TestCase):
         Follow.objects.create(user=self.follower, author=self.author)
         self.assertEqual(
             self.follower_client.get(reverse('posts:follow_index'))
-                .context['page_obj'].__len__(),
+            .context['page_obj']
+            .__len__(),
             1,
             'Пост автора отсуствует в ленте подписок',
         )
@@ -347,7 +349,8 @@ class FollowViewTest(TestCase):
         """
         self.assertEqual(
             self.follower_client.get(reverse('posts:follow_index'))
-                .context['page_obj'].__len__(),
+            .context['page_obj']
+            .__len__(),
             0,
             'Пост автора, на которого не подписан пользователь есть '
             'в ленте подписок',

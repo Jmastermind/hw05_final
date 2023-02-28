@@ -8,7 +8,6 @@
   {% cache 20 index_page %}
   {% for post in page_obj %}
     {% include "posts/includes/post.html" with grouplink=True %}
-    {% if not forloop.last %}<hr>{% endif %}
   {% endfor %}
 {% endcache %}
 {% include "includes/paginator.html" %}

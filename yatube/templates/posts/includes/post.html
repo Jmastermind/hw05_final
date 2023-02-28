@@ -1,25 +1,30 @@
 {% load thumbnail %}
-<article>
-  <ul>
-    <li>
-      Автор: <a href="{% url 'posts:profile' post.author.username %}">
-      {{ post.author.get_full_name }}
-    </a>
-  </li>
-  <li>Дата публикации: {{ post.created|date:'d E Y' }}</li>
-</ul>
-{% thumbnail post.image "960x339" crop="center" upscale=True as im %}
-<img class="card-img my-2" src="{{ im.url }}">
+<article class="card mb-5">
+  {% thumbnail post.image "960x339" crop="center" upscale=True as im %}
+  <img class="card-img-top" src="{{ im.url }}">
 {% endthumbnail %}
-<p>{{ post.text }}</p>
-<p>
-  <a href="{% url 'posts:post_detail' post.id %}">подробная информация</a>
-</p>
+<ul class="list-group list-group-flush">
+  <li class="list-group-item text-dark bg-light">
+    Автор: <a href="{% url 'posts:profile' post.author.username %}">
+    {{ post.author.get_full_name }}
+  </a>
+</li>
+<li class="list-group-item text-dark bg-light">
+  Дата публикации: {{ post.created|date:'d E Y' }}
+</li>
 {% if post.group and grouplink %}
-  <p>
+  <li class="list-group-item text-dark bg-light">
     Группа: <a href="{% url 'posts:group_list' post.group.slug %}">
     {{ post.group.title }}
   </a>
-</p>
+</li>
 {% endif %}
+</ul>
+<div class="card-body">
+  <h5 class="card-title">{{ post }}</h5>
+  <p class="card-text">{{ post.text }}</p>
+</div>
+<div class="card-body">
+  <a href="{% url 'posts:post_detail' post.id %}" class="card-link">подробная информация</a>
+</div>
 </article>
