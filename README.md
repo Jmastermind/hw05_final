@@ -1,3 +1,31 @@
-# hw05_final
+# Yatube для блогеров на Django
 
-[![CI](https://github.com/yandex-praktikum/hw05_final/actions/workflows/python-app.yml/badge.svg?branch=master)](https://github.com/yandex-praktikum/hw05_final/actions/workflows/python-app.yml)
+Веб приложение, которое позволяет блогерам создавать посты и вообще кайфовать.
+
+## Технологии
+
+- Python 3.9.10
+- Django 2.2.6
+- SQLite
+- Bootstrap
+- Unittest
+
+## Используемые стандарты
+- pep8
+- flake8
+- black
+- djlint
+- pyproject
+- pymarkdown
+
+## Как развернуть
+
+1. Склонируйте проект в рабочую директорию.
+2. Создайте виртуальное окружение.
+3. Установите зависимости из файла *requirements.txt*.
+4. Команды для запуска сервера и оболочки (из коневой директории проекта):
+
+    ```
+    make run
+    make shell
+    ```

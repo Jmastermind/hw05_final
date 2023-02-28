@@ -1,0 +1,46 @@
+[tool.black]
+include = '\.pyi?$'
+extend-exclude = '''
+(
+    venv
+    | migrations
+    | __
+    | /\.
+)
+'''
+line_length = 79
+skip-string-normalization = true
+
+[tool.djlint]
+indent = 2
+max_line_length = 79
+preserve_blank_lines = true
+profile = "django"
+
+[tool.flake8]
+ignore = ["W503"]
+exclude = [
+    "tests/",
+    "*/migrations/",
+    "venv/",
+    "env/",
+]
+per-file-ignores = ["*/settings.py: E501"]
+max-complexity = 10
+max_line_length = 79
+
+[tool.isort]
+profile = "black"
+src_paths = ["yatube"]
+
+[tool.mypy]
+python_version = "3.7"
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+pythonpath = ["yatube/"]
+DJANGO_SETTINGS_MODULE = "yatube.settings"
+norecursedirs = ["env/*"]
+addopts = "-vv -p no:cacheprovider"
+testpaths = ["tests/"]
+python_files = ["test_*.py"]

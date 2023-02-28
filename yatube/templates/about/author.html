@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% load static %}
+{% block title %}
+  Об авторе проекта
+{% endblock title %}
+{% block content %}
+  <div class="row">
+    <aside class="col-12 col-md-3 mb-3">
+      <div class="card">
+        <img src="{% static "img/portrait.jpg" %}"
+             class="card-img-top"
+             alt="portrait">
+        <div class="card-body">
+          <h5 class="card-title">Портгас Д. Эйс</h5>
+          <ul class="list-group list-group-flush">
+            <li class="list-group-item">Капитан второго отряда</li>
+            <li class="list-group-item">Most wanted</li>
+            <li class="list-group-item">
+              Огонь парень
+              <span>&#128293;</span>
+            </li>
+            <li class="list-group-item">Присматривает за братишкой</li>
+          </ul>
+        </div>
+      </div>
+    </aside>
+    <article class="col-12 col-md-9">
+      <h4>Немного обо мне</h4>
+      <p>
+        В свободное от поиска сокровищ время, я пишу программы на Python
+        и делаю сайты на Django
+        (только не рассказывайте об этом адмиралу&#129296;).
+      </p>
+    </article>
+  </div>
+{% endblock content %}
