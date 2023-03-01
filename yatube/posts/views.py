@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.contrib.auth.decorators import login_required
 from django.http import HttpRequest, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
@@ -5,7 +6,6 @@ from django.shortcuts import get_object_or_404, redirect, render
 from core.utils import paginate
 from posts.forms import CommentForm, PostForm
 from posts.models import Follow, Group, Post, User
-from yatube.settings import PAGINATION
 
 
 def index(request: HttpRequest) -> HttpResponse:
@@ -18,7 +18,7 @@ def index(request: HttpRequest) -> HttpResponse:
         HTML-код страницы.
     """
     posts = Post.objects.select_related('author', 'group')
-    page = paginate(request, posts, PAGINATION)
+    page = paginate(request, posts, settings.PAGINATION)
 
     return render(
         request,
@@ -42,7 +42,7 @@ def group_posts(request: HttpRequest, slug: str) -> HttpResponse:
     """
     group = get_object_or_404(Group, slug=slug)
     posts = group.posts.select_related('author')
-    page = paginate(request, posts, PAGINATION)
+    page = paginate(request, posts, settings.PAGINATION)
     return render(
         request,
         'posts/group_list.html',
@@ -65,10 +65,12 @@ def profile(request: HttpRequest, username: str) -> HttpResponse:
     """
     author = get_object_or_404(User, username=username)
     posts = author.posts.select_related('author', 'group')
-    page = paginate(request, posts, PAGINATION)
-    following = False
-    if request.user.is_authenticated:
-        following = author.following.filter(user=request.user).exists()
+    page = paginate(request, posts, settings.PAGINATION)
+    following = (
+        author.following.filter(user=request.user).exists()
+        if request.user.is_authenticated
+        else False
+    )
     return render(
         request,
         'posts/profile.html',
@@ -76,7 +78,6 @@ def profile(request: HttpRequest, username: str) -> HttpResponse:
             'author': author,
             'page_obj': page,
             'following': following,
-            'followers': author.following.count(),
         },
     )
 
@@ -126,7 +127,18 @@ def post_create(request: HttpRequest) -> HttpResponse:
     return redirect('posts:profile', request.user)
 
 
+def author_required(fun):
+    def author_check(request, pk, *args, **kwargs):
+        post = get_object_or_404(Post, pk=pk)
+        if post.author == request.user:
+            return fun(request, pk, *args, **kwargs)
+        return redirect('posts:post_detail', post.pk)
+
+    return author_check
+
+
 @login_required
+@author_required
 def post_delete(request: HttpRequest, pk: int) -> HttpResponse:
     """Удаляет запись из БД.
 
@@ -137,14 +149,15 @@ def post_delete(request: HttpRequest, pk: int) -> HttpResponse:
     Returns:
         Перенаправляет на главную страницу.
     """
+    del request
     post = get_object_or_404(Post, pk=pk)
-    if post.author != request.user:
-        return redirect('posts:post_detail', post.pk)
+    post.image.delete()
     post.delete()
     return redirect('posts:index')
 
 
 @login_required
+@author_required
 def post_edit(request: HttpRequest, pk: int) -> HttpResponse:
     """Создаёт страницу редактирования записи.
 
@@ -156,8 +169,6 @@ def post_edit(request: HttpRequest, pk: int) -> HttpResponse:
         Перенаправляет на страницу записи.
     """
     post = get_object_or_404(Post, pk=pk)
-    if post.author != request.user:
-        return redirect('posts:post_detail', post.pk)
     form = PostForm(
         request.POST or None,
         files=request.FILES or None,
@@ -174,8 +185,8 @@ def post_edit(request: HttpRequest, pk: int) -> HttpResponse:
 
 
 @login_required
-def add_comment(request: HttpRequest, post_id: int) -> HttpResponse:
-    post = get_object_or_404(Post, pk=post_id)
+def add_comment(request: HttpRequest, pk: int) -> HttpResponse:
+    post = get_object_or_404(Post, pk=pk)
     form = CommentForm(request.POST or None)
     if form.is_valid():
         form.instance.author = request.user
@@ -185,13 +196,13 @@ def add_comment(request: HttpRequest, post_id: int) -> HttpResponse:
 
 
 @login_required
-def follow_index(request: HttpRequest):
+def follow_index(request: HttpRequest) -> HttpResponse:
     page = paginate(
         request,
         Post.objects.filter(
             author__following__user=request.user,
         ).select_related('author', 'group'),
-        PAGINATION,
+        settings.PAGINATION,
     )
     return render(
         request,
@@ -203,7 +214,7 @@ def follow_index(request: HttpRequest):
 
 
 @login_required
-def profile_follow(request, username) -> HttpResponse:
+def profile_follow(request: HttpRequest, username: str) -> HttpResponse:
     if (
         not request.user.follower.filter(author__username=username).exists()
         and username != request.user.username
@@ -218,8 +229,9 @@ def profile_follow(request, username) -> HttpResponse:
 @login_required
 def profile_unfollow(request, username) -> HttpResponse:
     if request.user.follower.filter(author__username=username).exists():
-        Follow.objects.get(
+        get_object_or_404(
+            Follow,
             user=request.user,
-            author=get_object_or_404(User, username=username),
+            author__username=username,
         ).delete()
     return redirect('posts:profile', username)

@@ -1,30 +1,26 @@
 {% load thumbnail %}
 <article class="card mb-5">
   {% thumbnail post.image "960x339" crop="center" upscale=True as im %}
-  <img class="card-img-top" src="{{ im.url }}">
-{% endthumbnail %}
-<ul class="list-group list-group-flush">
-  <li class="list-group-item text-dark bg-light">
-    Автор: <a href="{% url 'posts:profile' post.author.username %}">
-    {{ post.author.get_full_name }}
-  </a>
-</li>
-<li class="list-group-item text-dark bg-light">
-  Дата публикации: {{ post.created|date:'d E Y' }}
-</li>
-{% if post.group and grouplink %}
-  <li class="list-group-item text-dark bg-light">
-    Группа: <a href="{% url 'posts:group_list' post.group.slug %}">
-    {{ post.group.title }}
-  </a>
-</li>
-{% endif %}
-</ul>
-<div class="card-body">
-  <h5 class="card-title">{{ post }}</h5>
-  <p class="card-text">{{ post.text }}</p>
-</div>
-<div class="card-body">
-  <a href="{% url 'posts:post_detail' post.id %}" class="card-link">подробная информация</a>
-</div>
+    <img class="card-img-top" src="{{ im.url }}">
+  {% endthumbnail %}
+  <ul class="list-group list-group-flush">
+    <li class="list-group-item text-dark bg-light">
+      Автор: <a href="{% url 'posts:profile' post.author.username %}">{{ post.author.get_full_name }}</a>
+    </li>
+    <li class="list-group-item text-dark bg-light">
+      Дата публикации: {{ post.created|date:'d E Y' }}
+    </li>
+    {% if post.group and grouplink %}
+      <li class="list-group-item text-dark bg-light">
+        Группа: <a href="{% url 'posts:group_list' post.group.slug %}">{{ post.group.title }}</a>
+      </li>
+    {% endif %}
+  </ul>
+  <div class="card-body">
+    <h5 class="card-title">{{ post }}</h5>
+    <p class="card-text">{{ post.text }}</p>
+  </div>
+  <div class="card-body">
+    <a href="{% url 'posts:post_detail' post.id %}" class="card-link">подробная информация</a>
+  </div>
 </article>

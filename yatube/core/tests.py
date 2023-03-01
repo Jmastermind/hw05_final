@@ -1,9 +1,9 @@
 from http import HTTPStatus
 
+from django.conf import settings
 from django.test import TestCase
 
 from core.utils import truncate
-from yatube.settings import TRUNCATION
 
 
 class UtilsTests(TestCase):
@@ -16,16 +16,16 @@ class UtilsTests(TestCase):
     def test_truncate_long_text(self):
         """Проверяем работу функции truncate c длинным текстом."""
         self.assertEqual(
-            truncate(self.long_text, TRUNCATION),
-            self.long_text[:TRUNCATION] + '...',
+            truncate(self.long_text, settings.TRUNCATION),
+            self.long_text[: settings.TRUNCATION] + '...',
             'Функция truncate работает некорректно с длинным текстом',
         )
 
     def test_truncate_short_text(self):
         """Проверяем работу функции truncate c коротким текстом."""
         self.assertEqual(
-            truncate(self.short_text, TRUNCATION),
-            self.short_text[:TRUNCATION],
+            truncate(self.short_text, settings.TRUNCATION),
+            self.short_text[: settings.TRUNCATION],
             'Функция truncate работает некорректно c коротким текстом',
         )
 

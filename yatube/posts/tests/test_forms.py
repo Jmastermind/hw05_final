@@ -2,12 +2,14 @@ import shutil
 import tempfile
 
 from django.conf import settings
-from django.core.files.uploadedfile import SimpleUploadedFile
 from django.test import Client, TestCase, override_settings
 from django.urls import reverse
+from faker import Faker
 from mixer.backend.django import mixer
+from testdata import wrap_testdata
 
 from posts.models import Comment, Group, Post, User
+from posts.tests.common import get_image
 
 TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 
@@ -15,8 +17,8 @@ TEMP_MEDIA_ROOT = tempfile.mkdtemp(dir=settings.BASE_DIR)
 @override_settings(MEDIA_ROOT=TEMP_MEDIA_ROOT)
 class PostCreateFormTests(TestCase):
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    @wrap_testdata
+    def setUpTestData(cls):
         cls.user, cls.auth = mixer.blend(User), Client()
         cls.auth.force_login(cls.user)
 
@@ -28,23 +30,10 @@ class PostCreateFormTests(TestCase):
     def test_create_post(self) -> None:
         """Валидная форма создает новый пост."""
         group = mixer.blend(Group)
-        small_gif = (
-            b'\x47\x49\x46\x38\x39\x61\x02\x00'
-            b'\x01\x00\x80\x00\x00\x00\x00\x00'
-            b'\xFF\xFF\xFF\x21\xF9\x04\x00\x00'
-            b'\x00\x00\x00\x2C\x00\x00\x00\x00'
-            b'\x02\x00\x01\x00\x00\x02\x02\x0C'
-            b'\x0A\x00\x3B'
-        )
-        uploaded = SimpleUploadedFile(
-            name='small.gif',
-            content=small_gif,
-            content_type='image/gif',
-        )
         data = {
             'text': 'Тестовый текст',
             'group': group.pk,
-            'image': uploaded,
+            'image': get_image('image_1.gif'),
         }
         response = self.auth.post(
             reverse('posts:post_create'),
@@ -89,6 +78,7 @@ class PostCreateFormTests(TestCase):
         data = {
             'text': 'Текст изменен',
             'group': '',
+            'image': get_image('image_2.gif'),
         }
         response = self.auth.post(
             reverse('posts:post_edit', args=(post.pk,)),
@@ -110,6 +100,11 @@ class PostCreateFormTests(TestCase):
                 data['text'],
                 'У измененного поста неправильный текст',
             ),
+            (
+                response.context['post'].image.size,
+                data['image'].size,
+                'У измененного поста неправильная картинка',
+            ),
         )
         for field, expected, message in fields:
             with self.subTest(field=field, expected=expected):
@@ -119,7 +114,7 @@ class PostCreateFormTests(TestCase):
                     message,
                 )
 
-    def test_guest_create_post(self) -> None:
+    def test_guest_cant_create_post(self) -> None:
         """Аноним не создаёт пост."""
         self.client.post(
             reverse('posts:post_create'),
@@ -133,9 +128,9 @@ class PostCreateFormTests(TestCase):
             'после создания поста анонимом',
         )
 
-    def test_guest_edit_post(self) -> None:
+    def test_guest_cant_edit_post(self) -> None:
         """Аноним не редактирует пост."""
-        post = mixer.blend(Post, author=self.user)
+        post = mixer.blend(Post, author=self.user, image=None)
         self.client.post(
             reverse('posts:post_edit', args=(post.pk,)),
             data={'text': 'Анонимное изменение'},
@@ -151,7 +146,7 @@ class PostCreateFormTests(TestCase):
         """Не автор не редактирует пост."""
         user, auth = mixer.blend(User, username='tester_2'), Client()
         auth.force_login(user)
-        post = mixer.blend(Post, author=self.user)
+        post = mixer.blend(Post, author=self.user, image=None)
         auth.post(
             reverse('posts:post_edit', args=(post.pk,)),
             data={'text': 'Изменение не автором'},
@@ -166,17 +161,18 @@ class PostCreateFormTests(TestCase):
 
 class CommentFormTests(TestCase):
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    @wrap_testdata
+    def setUpTestData(cls):
         cls.user, cls.auth = mixer.blend(User), Client()
         cls.auth.force_login(cls.user)
-        cls.post = mixer.blend(Post, author=cls.user)
+        cls.post = mixer.blend(Post, author=cls.user, image=None)
+        cls.post_text = Faker().text()
 
     def test_create_comment(self) -> None:
         """Валидная форма создает новый коммент."""
         response = self.auth.post(
             reverse('posts:add_comment', args=(self.post.pk,)),
-            data={'text': 'Тестовый коммент'},
+            data={'text': self.post_text},
             follow=True,
         )
         self.assertRedirects(
@@ -192,7 +188,7 @@ class CommentFormTests(TestCase):
         )
         self.assertEqual(
             response.context['comments'][0].text,
-            'Тестовый коммент',
+            self.post_text,
             'У коммента неправильный текст',
         )
 
@@ -200,7 +196,7 @@ class CommentFormTests(TestCase):
         """Аноним не комментит."""
         self.client.post(
             reverse('posts:add_comment', args=(self.post.pk,)),
-            data={'text': 'Анонимный текст'},
+            data={'text': self.post_text},
             follow=True,
         )
         self.assertEqual(
@@ -208,4 +204,80 @@ class CommentFormTests(TestCase):
             0,
             f'Неверное количество комментов ({Comment.objects.count()}) '
             'от анонима',
+        )
+
+
+class FollowTests(TestCase):
+    @classmethod
+    @wrap_testdata
+    def setUpTestData(cls):
+        cls.author = mixer.blend(User)
+        cls.follower, cls.follower_client = mixer.blend(User), Client()
+        cls.follower_client.force_login(cls.follower)
+
+    def test_follow(self) -> None:
+        """Успешная подписка на автора."""
+        self.follower_client.get(
+            reverse('posts:profile_follow', args=(self.author.username,)),
+        )
+        self.assertTrue(
+            self.follower.follower.filter(author=self.author).exists(),
+            'Пользователь не может подписаться на автора',
+        )
+        self.assertEqual(
+            self.author.following.all().count(),
+            1,
+            'Число подписчиков у автора не увеличилось',
+        )
+
+    def test_cant_follow_again(self) -> None:
+        """Повторная подписка на автора."""
+        self.follower_client.get(
+            reverse('posts:profile_follow', args=(self.author.username,)),
+        )
+        self.assertEqual(
+            self.follower.follower.filter(author=self.author).count(),
+            1,
+            'Пользователь может повторно подписаться',
+        )
+
+    def test_ufollow(self) -> None:
+        """Отписка от автора."""
+        self.follower_client.get(
+            reverse('posts:profile_unfollow', args=(self.author.username,)),
+        )
+        self.assertFalse(
+            self.follower.follower.filter(author=self.author).exists(),
+            'Пользователь не может отписаться от автора',
+        )
+
+    def test_self_follow(self) -> None:
+        """Самоподписка."""
+        self.follower_client.get(
+            reverse('posts:profile_unfollow', args=(self.follower.username,)),
+        )
+        self.assertFalse(
+            self.follower.follower.filter(author=self.follower).exists(),
+            'Пользователь может подписаться на себя',
+        )
+
+    def test_guest_follow(self) -> None:
+        """Подписка анонимом."""
+        self.client.get(
+            reverse('posts:profile_follow', args=(self.author.username,)),
+        )
+        self.assertEqual(
+            self.author.following.all().count(),
+            0,
+            'Аноним может подписаться',
+        )
+
+    def test_follow_guest(self) -> None:
+        """Подписка на анонима."""
+        self.client.get(
+            reverse('posts:profile_follow', args=('guest',)),
+        )
+        self.assertFalse(
+            self.follower.follower.filter(author__username='guest').exists(),
+            'Пользователь может подписаться на анонима',
         )

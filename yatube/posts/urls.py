@@ -7,7 +7,7 @@ app_name = '%(app_label)s'
 urlpatterns = [
     path('', views.index, name='index'),
     path(
-        'posts/<int:post_id>/comment/',
+        'posts/<int:pk>/comment/',
         views.add_comment,
         name='add_comment',
     ),

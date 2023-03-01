@@ -9,8 +9,7 @@
         <div class="card-header">Изменить пароль</div>
         <div class="card-body">
           {% include "includes/form_errors.html" %}
-          <form method="post"
-                {% if action_url %} action="{% url action_url %}" {% endif %}>
+          <form method="post" {% if action_url %} action="{% url action_url %}" {% endif %}>
             {% csrf_token %}
             {% include 'includes/form_fields.html' %}
             <div class="col-md-6 offset-md-4">

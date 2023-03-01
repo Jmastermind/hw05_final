@@ -4,7 +4,7 @@ from typing import Dict
 from django.http import HttpRequest
 
 
-def year(unused: HttpRequest) -> Dict[str, int]:
+def year(request: HttpRequest) -> Dict[str, int]:
     """Добавляет переменную с текущим годом.
 
     Args:
@@ -13,7 +13,7 @@ def year(unused: HttpRequest) -> Dict[str, int]:
     Returns:
         Cловарь содержащий переменную с текущим годом.
     """
-    del unused
+    del request
     return {
         'year': date.today().year,
     }

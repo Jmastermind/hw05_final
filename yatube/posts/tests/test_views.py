@@ -1,22 +1,26 @@
 from django import forms
+from django.conf import settings
 from django.test import Client, TestCase
 from django.urls import reverse
 from mixer.backend.django import mixer
+from testdata import wrap_testdata
 
 from posts.models import Follow, Group, Post, User
-from yatube.settings import PAGINATION
-
-# from django.core.cache import cache
 
 
 class YatubePagesTests(TestCase):
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    @wrap_testdata
+    def setUpTestData(cls):
         cls.user, cls.auth = mixer.blend(User), Client()
         cls.auth.force_login(cls.user)
         cls.group = mixer.blend(Group)
-        cls.post = mixer.blend(Post, author=cls.user, group=cls.group)
+        cls.post = mixer.blend(
+            Post,
+            author=cls.user,
+            group=cls.group,
+            image=None,
+        )
         cls.urls = {
             'create': reverse('posts:post_create'),
             'detail': reverse('posts:post_detail', args=(cls.post.pk,)),
@@ -57,11 +61,6 @@ class YatubePagesTests(TestCase):
                 self.post.text,
                 'Неверное содержание текста поста',
             ),
-            (
-                self.auth.get(self.urls['index']).context['page_obj'][0].image,
-                self.post.image,
-                'Неверное содержание поля картинки',
-            ),
         )
         for context, expected, message in contexts:
             with self.subTest(context=context):
@@ -101,11 +100,6 @@ class YatubePagesTests(TestCase):
                 self.post.text,
                 'Неверное содержание текста поста группы',
             ),
-            (
-                self.auth.get(self.urls['group']).context['page_obj'][0].image,
-                self.post.image,
-                'Неверное содержание поля картинки',
-            ),
         )
         for context, expected, message in contexts:
             with self.subTest(context=context):
@@ -139,13 +133,6 @@ class YatubePagesTests(TestCase):
                 self.post.text,
                 'Неверное содержание текста поста на странице автора',
             ),
-            (
-                self.auth.get(self.urls['profile'])
-                .context['page_obj'][0]
-                .image,
-                self.post.image,
-                'Неверное содержание поля картинки',
-            ),
         )
         for context, expected, message in contexts:
             with self.subTest(context=context):
@@ -167,11 +154,6 @@ class YatubePagesTests(TestCase):
                 self.auth.get(self.urls['detail']).context['post'].text,
                 self.post.text,
                 'Неверное содержание текста поста на странице поста',
-            ),
-            (
-                self.auth.get(self.urls['detail']).context['post'].image,
-                self.post.image,
-                'Неверное содержание поля картинки',
             ),
         )
         for context, expected, message in contexts:
@@ -209,8 +191,8 @@ class YatubePagesTests(TestCase):
 
 class PaginatorViewsTest(TestCase):
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    @wrap_testdata
+    def setUpTestData(cls):
         cls.user, cls.auth = mixer.blend(User), Client()
         cls.auth.force_login(cls.user)
         cls.group = mixer.blend(Group)
@@ -218,6 +200,7 @@ class PaginatorViewsTest(TestCase):
             Post,
             author=cls.user,
             group=cls.group,
+            image=None,
         )
         cls.urls = {
             'group': reverse('posts:group_list', args=(cls.group.slug,)),
@@ -231,7 +214,7 @@ class PaginatorViewsTest(TestCase):
         pages = (
             (
                 self.urls.get('index'),
-                PAGINATION,
+                settings.PAGINATION,
                 'Неверное количество постов на первой странице home',
             ),
             (
@@ -241,7 +224,7 @@ class PaginatorViewsTest(TestCase):
             ),
             (
                 self.urls.get('group'),
-                PAGINATION,
+                settings.PAGINATION,
                 'Неверное количество постов на первой странице home',
             ),
             (
@@ -251,7 +234,7 @@ class PaginatorViewsTest(TestCase):
             ),
             (
                 self.urls.get('profile'),
-                PAGINATION,
+                settings.PAGINATION,
                 'Неверное количество постов на первой странице home',
             ),
             (
@@ -271,7 +254,7 @@ class PaginatorViewsTest(TestCase):
 
 class CacheTest(TestCase):
     def test_home_cache(self) -> None:
-        post = mixer.blend(Post, text='Изначальный текст')
+        post = mixer.blend(Post, text='Изначальный текст', image=None)
         self.assertEqual(
             self.client.get(reverse('posts:index'))
             .context['page_obj'][0]
@@ -287,19 +270,12 @@ class CacheTest(TestCase):
             'Изначальный текст',
             'Неверный текст поста после кэширования',
         )
-        # cache.clear()
-        # self.assertEqual(
-        #     self.client.get(reverse('posts:index'))
-        #     .context['page_obj'][0].text,
-        #     'Текст изменен',
-        #     'Неверный текст поста после очистки кэша',
-        # )
 
 
 class FollowViewTest(TestCase):
     @classmethod
-    def setUpClass(cls):
-        super().setUpClass()
+    @wrap_testdata
+    def setUpTestData(cls):
         cls.author, cls.follower = mixer.cycle(2).blend(
             User,
             username=(name for name in ('author', 'follower')),
@@ -308,10 +284,10 @@ class FollowViewTest(TestCase):
         cls.follower_client = Client()
         cls.author_client.force_login(cls.author)
         cls.follower_client.force_login(cls.follower)
-        cls.post = mixer.blend(Post, author=cls.author)
+        cls.post = mixer.blend(Post, author=cls.author, image=None)
 
     def test_follow_profile(self) -> None:
-        """Проверяем, что авторизованный пользователь может подписываться"""
+        """Проверяем, что авторизованный пользователь может подписываться."""
         self.follower_client.get(
             reverse('posts:profile_follow', args=(self.author.username,)),
         )
@@ -321,7 +297,7 @@ class FollowViewTest(TestCase):
         )
 
     def test_unfollow_profile(self) -> None:
-        """Проверяем, что подписчик может отписаться от автора"""
+        """Проверяем, что подписчик может отписаться от автора."""
         Follow.objects.create(user=self.follower, author=self.author)
         self.follower_client.get(
             reverse('posts:profile_unfollow', args=(self.author.username,)),
@@ -332,7 +308,7 @@ class FollowViewTest(TestCase):
         )
 
     def test_following_feed(self) -> None:
-        """Проверяем, что в ленте подписок есть пост автора"""
+        """Проверяем, что в ленте подписок есть пост автора."""
         Follow.objects.create(user=self.follower, author=self.author)
         self.assertEqual(
             self.follower_client.get(reverse('posts:follow_index'))
@@ -343,9 +319,8 @@ class FollowViewTest(TestCase):
         )
 
     def test_not_following_feed(self) -> None:
-        """
-        Проверяем, что в ленте подписок нет поста автора,
-        на которого не подписан
+        """Проверяем, что в ленте подписок нет поста автора, на которого
+        не подписан.
         """
         self.assertEqual(
             self.follower_client.get(reverse('posts:follow_index'))

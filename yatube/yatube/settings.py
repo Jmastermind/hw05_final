@@ -28,6 +28,7 @@ INSTALLED_APPS = [
     'posts.apps.PostsConfig',
     'users.apps.UsersConfig',
 
+    'behaviors.apps.BehaviorsConfig',
     'sorl.thumbnail',
 ]
 # fmt: on
@@ -99,19 +100,25 @@ AUTH_PASSWORD_VALIDATORS = [
 CSRF_FAILURE_VIEW = 'core.views.csrf_failure'
 
 EMAIL_BACKEND = 'django.core.mail.backends.filebased.EmailBackend'
+
 EMAIL_FILE_PATH = path.join(BASE_DIR, 'sent_emails')
 
 LANGUAGE_CODE = 'ru'
 
 LOGIN_REDIRECT_URL = 'posts:index'
+
 LOGIN_URL = 'users:login'
 
 MEDIA_URL = '/media/'
+
 MEDIA_ROOT = BASE_DIR / 'media'
+
+THUMBNAIL_DEBUG = True
 
 PAGINATION = 10
 
 STATIC_URL = '/static/'
+
 STATICFILES_DIRS = (BASE_DIR / 'static',)
 
 TIME_ZONE = 'UTC'
@@ -119,6 +126,7 @@ TIME_ZONE = 'UTC'
 TRUNCATION = 20
 
 USE_L10N = True
+
 USE_TZ = True
 
 CACHES = {

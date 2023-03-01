@@ -1,10 +1,12 @@
 from http import HTTPStatus
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.contrib.auth.views import redirect_to_login
 from django.test import Client, TestCase
 from django.urls import reverse
 from mixer.backend.django import mixer
+from testdata import wrap_testdata
 
 from posts.models import Group, Post
 
@@ -13,26 +15,36 @@ User = get_user_model()
 
 class PostsURLTests(TestCase):
     @classmethod
-    def setUpClass(cls) -> None:
-        super().setUpClass()
+    @wrap_testdata
+    def setUpTestData(cls):
         cls.user, cls.author_user = mixer.cycle(2).blend(User)
         cls.group = mixer.blend(Group)
-        cls.post = mixer.blend(Post, author=cls.author_user)
+        cls.post = mixer.blend(Post, author=cls.author_user, image=None)
         cls.auth = Client()
         cls.author = Client()
         cls.auth.force_login(cls.user)
         cls.author.force_login(cls.author_user)
 
         cls.urls = {
+            'comment': reverse('posts:add_comment', args=(cls.post.pk,)),
             'create': reverse('posts:post_create'),
             'edit': reverse('posts:post_edit', args=(cls.post.pk,)),
             'detail': reverse('posts:post_detail', args=(cls.post.pk,)),
+            'following': reverse('posts:follow_index'),
+            'follow': reverse(
+                'posts:profile_follow',
+                args=(cls.author_user.username,),
+            ),
             'group': reverse('posts:group_list', args=(cls.group.slug,)),
             'index': reverse('posts:index'),
-            'login': reverse('users:login'),
+            'login': reverse(settings.LOGIN_URL),
             'missing': 'missing',
             'profile': reverse(
                 'posts:profile',
+                args=(cls.author_user.username,),
+            ),
+            'unfollow': reverse(
+                'posts:profile_unfollow',
                 args=(cls.author_user.username,),
             ),
         }
@@ -96,9 +108,39 @@ class PostsURLTests(TestCase):
                 self.author,
                 'Ошибка адреса страницы редактирования поста (автор)',
             ),
+            (
+                self.urls.get('following'),
+                HTTPStatus.FOUND,
+                self.client,
+                'Ошибка адреса страницы подписок (гость)',
+            ),
+            (
+                self.urls.get('following'),
+                HTTPStatus.OK,
+                self.auth,
+                'Ошибка адреса страницы подписок (пользователь)',
+            ),
+            (
+                self.urls.get('comment'),
+                HTTPStatus.FOUND,
+                self.auth,
+                'Ошибка адреса создания коммента (пользователь)',
+            ),
+            (
+                self.urls.get('follow'),
+                HTTPStatus.FOUND,
+                self.auth,
+                'Ошибка адреса подписаться на автора (пользователь)',
+            ),
+            (
+                self.urls.get('unfollow'),
+                HTTPStatus.FOUND,
+                self.auth,
+                'Ошибка адреса отписаться от автора (пользователь)',
+            ),
         )
         for url, status, client, message in httpstatuses:
-            with self.subTest(url=url):
+            with self.subTest(url=url, client=client, status=status):
                 self.assertEqual(
                     client.get(url).reason_phrase,
                     status.phrase,

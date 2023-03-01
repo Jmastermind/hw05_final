@@ -1,14 +1,14 @@
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
 
-from core.models import CreatedModel
+from core.models import AuthoredModel, DefaultModel
 from core.utils import truncate
-from yatube.settings import TRUNCATION
 
 User = get_user_model()
 
 
-class Group(models.Model):
+class Group(DefaultModel):
     """Модель ORM для хранения групп постов пользователей."""
 
     title = models.CharField('название', max_length=200)
@@ -20,18 +20,12 @@ class Group(models.Model):
         verbose_name_plural = 'группы постов'
 
     def __str__(self) -> str:
-        return truncate(self.title, TRUNCATION)
+        return truncate(self.title, settings.TRUNCATION)
 
 
-class Post(CreatedModel):
+class Post(AuthoredModel):
     """Модель ORM для хранения постов пользователей."""
 
-    text = models.TextField('текст', help_text='введите текст поста')
-    author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        verbose_name='автор',
-    )
     group = models.ForeignKey(
         Group,
         blank=True,
@@ -40,7 +34,7 @@ class Post(CreatedModel):
         verbose_name='группа постов',
     )
     image = models.ImageField(
-        'Картинка',
+        'картинка',
         upload_to='posts/',
         blank=True,
     )
@@ -52,10 +46,10 @@ class Post(CreatedModel):
         verbose_name_plural = 'посты'
 
     def __str__(self) -> str:
-        return truncate(self.text, TRUNCATION)
+        return truncate(self.text, settings.TRUNCATION)
 
 
-class Comment(CreatedModel):
+class Comment(AuthoredModel):
     """Модель ORM для хранения комментариев пользователей."""
 
     post = models.ForeignKey(
@@ -63,12 +57,6 @@ class Comment(CreatedModel):
         on_delete=models.CASCADE,
         verbose_name='пост',
     )
-    author = models.ForeignKey(
-        User,
-        on_delete=models.CASCADE,
-        verbose_name='автор',
-    )
-    text = models.TextField('текст', help_text='введите текст комментария')
 
     class Meta:
         default_related_name = 'comments'
@@ -76,10 +64,10 @@ class Comment(CreatedModel):
         verbose_name_plural = 'комментарии'
 
     def __str__(self) -> str:
-        return truncate(self.text, TRUNCATION)
+        return truncate(self.text, settings.TRUNCATION)
 
 
-class Follow(models.Model):
+class Follow(DefaultModel):
     """Модель ORM для подписок."""
 
     user = models.ForeignKey(
@@ -98,3 +86,6 @@ class Follow(models.Model):
     class Meta:
         verbose_name = 'подписка'
         verbose_name_plural = 'подписки'
+
+    def __str__(self) -> str:
+        return f'Пользователь {self.user} подписан на автора {self.author}'
