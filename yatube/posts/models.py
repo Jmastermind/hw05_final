@@ -39,14 +39,10 @@ class Post(AuthoredModel):
         blank=True,
     )
 
-    class Meta:
+    class Meta(AuthoredModel.Meta):
         default_related_name = 'posts'
-        ordering = ('-pk',)
         verbose_name = 'пост'
         verbose_name_plural = 'посты'
-
-    def __str__(self) -> str:
-        return truncate(self.text, settings.TRUNCATION)
 
 
 class Comment(AuthoredModel):
@@ -58,13 +54,10 @@ class Comment(AuthoredModel):
         verbose_name='пост',
     )
 
-    class Meta:
+    class Meta(AuthoredModel.Meta):
         default_related_name = 'comments'
         verbose_name = 'комментарий'
         verbose_name_plural = 'комментарии'
-
-    def __str__(self) -> str:
-        return truncate(self.text, settings.TRUNCATION)
 
 
 class Follow(DefaultModel):
@@ -88,4 +81,4 @@ class Follow(DefaultModel):
         verbose_name_plural = 'подписки'
 
     def __str__(self) -> str:
-        return f'Пользователь {self.user} подписан на автора {self.author}'
+        return f'Пользователь `{self.user}` подписан на автора `{self.author}`'

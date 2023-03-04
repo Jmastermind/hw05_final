@@ -1,6 +1,7 @@
 WORKDIR = yatube
 TEMPLATES-DIR = $(WORKDIR)/templates
 MANAGE = python $(WORKDIR)/manage.py
+TESTS = $(WORKDIR)/posts/tests
 
 run:
 	$(MANAGE) runserver
@@ -22,4 +23,4 @@ check:
 	flake8 $(WORKDIR)
 
 test:
-	$(MANAGE) test --keepdb $(t)
+	$(MANAGE) test --keepdb $(TESTS)

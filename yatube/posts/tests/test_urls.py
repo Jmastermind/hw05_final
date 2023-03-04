@@ -1,7 +1,7 @@
 from http import HTTPStatus
 
 from django.conf import settings
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user, get_user_model
 from django.contrib.auth.views import redirect_to_login
 from django.test import Client, TestCase
 from django.urls import reverse
@@ -140,7 +140,9 @@ class PostsURLTests(TestCase):
             ),
         )
         for url, status, client, message in httpstatuses:
-            with self.subTest(url=url, client=client, status=status):
+            with self.subTest(
+                url=url, client=get_user(client).username, status=status,
+            ):
                 self.assertEqual(
                     client.get(url).reason_phrase,
                     status.phrase,
@@ -211,5 +213,5 @@ class PostsURLTests(TestCase):
             ),
         )
         for url_from, url_to, client in redirects:
-            with self.subTest(url=url_from):
+            with self.subTest(url_from=url_from, url_to=url_to):
                 self.assertRedirects(client.get(url_from), url_to)

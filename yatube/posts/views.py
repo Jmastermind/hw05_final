@@ -67,9 +67,8 @@ def profile(request: HttpRequest, username: str) -> HttpResponse:
     posts = author.posts.select_related('author', 'group')
     page = paginate(request, posts, settings.PAGINATION)
     following = (
-        author.following.filter(user=request.user).exists()
-        if request.user.is_authenticated
-        else False
+        request.user.is_authenticated
+        and author.following.filter(user=request.user).exists()
     )
     return render(
         request,
@@ -127,60 +126,50 @@ def post_create(request: HttpRequest) -> HttpResponse:
     return redirect('posts:profile', request.user)
 
 
-def author_required(fun):
-    def author_check(request, pk, *args, **kwargs):
-        post = get_object_or_404(Post, pk=pk)
-        if post.author == request.user:
-            return fun(request, pk, *args, **kwargs)
-        return redirect('posts:post_detail', post.pk)
-
-    return author_check
-
-
 @login_required
-@author_required
 def post_delete(request: HttpRequest, pk: int) -> HttpResponse:
     """Удаляет запись из БД.
 
     Args:
-        request: Запрос на удаление страницы.
+        request: Запрос http.
         pk: Идентификатор записи.
 
     Returns:
         Перенаправляет на главную страницу.
     """
-    del request
     post = get_object_or_404(Post, pk=pk)
+    if post.author != request.user:
+        return redirect('posts:post_detail', post.pk)
     post.image.delete()
     post.delete()
     return redirect('posts:index')
 
 
 @login_required
-@author_required
 def post_edit(request: HttpRequest, pk: int) -> HttpResponse:
     """Создаёт страницу редактирования записи.
 
     Args:
-        request: Запрос на рендер страницы.
+        request: Запрос http.
         pk: Идентификатор записи.
 
     Returns:
         Перенаправляет на страницу записи.
     """
     post = get_object_or_404(Post, pk=pk)
-    form = PostForm(
-        request.POST or None,
-        files=request.FILES or None,
-        instance=post,
-    )
-    if not form.is_valid():
-        return render(
-            request,
-            'posts/create_post.html',
-            {'form': form, 'btn_txt': 'Сохранить'},
+    if post.author == request.user:
+        form = PostForm(
+            request.POST or None,
+            files=request.FILES or None,
+            instance=post,
         )
-    form.save()
+        if not form.is_valid():
+            return render(
+                request,
+                'posts/create_post.html',
+                {'form': form, 'btn_txt': 'Сохранить'},
+            )
+        form.save()
     return redirect('posts:post_detail', post.pk)
 
 
@@ -227,11 +216,10 @@ def profile_follow(request: HttpRequest, username: str) -> HttpResponse:
 
 
 @login_required
-def profile_unfollow(request, username) -> HttpResponse:
-    if request.user.follower.filter(author__username=username).exists():
-        get_object_or_404(
-            Follow,
-            user=request.user,
-            author__username=username,
-        ).delete()
+def profile_unfollow(request: HttpRequest, username: str) -> HttpResponse:
+    get_object_or_404(
+        Follow,
+        user=request.user,
+        author__username=username,
+    ).delete()
     return redirect('posts:profile', username)

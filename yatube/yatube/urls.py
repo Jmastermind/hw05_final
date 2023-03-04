@@ -10,17 +10,17 @@ handler500 = 'core.views.server_error'
 
 urlpatterns = [
     path(
-        '',
-        include(
-            'posts.urls',
-            namespace=apps.get_app_config('posts').name,
-        ),
-    ),
-    path(
         'about/',
         include(
             'about.urls',
             namespace=apps.get_app_config('about').name,
+        ),
+    ),
+    path(
+        '',
+        include(
+            'posts.urls',
+            namespace=apps.get_app_config('posts').name,
         ),
     ),
     path('admin/', admin.site.urls),

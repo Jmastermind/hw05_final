@@ -182,7 +182,8 @@ class FollowModelTest(TestCase):
         comment = mixer.blend(Follow)
         self.assertEqual(
             str(comment),
-            f'Пользователь {comment.user} подписан на автора {comment.author}',
+            f'Пользователь `{comment.user}` подписан '
+            f'на автора `{comment.author}`',
             'Неверное поле __str__ объекта коммента',
         )
 

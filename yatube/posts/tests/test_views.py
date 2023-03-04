@@ -319,9 +319,7 @@ class FollowViewTest(TestCase):
         )
 
     def test_not_following_feed(self) -> None:
-        """Проверяем, что в ленте подписок нет поста автора, на которого
-        не подписан.
-        """
+        """Проверяем, что в ленте подписок нет поста автора."""
         self.assertEqual(
             self.follower_client.get(reverse('posts:follow_index'))
             .context['page_obj']

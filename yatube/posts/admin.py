@@ -27,6 +27,6 @@ class CommentAdmin(BaseAdmin):
 
 @admin.register(Follow)
 class FollowAdmin(BaseAdmin):
-    list_display = ('author', 'user')
+    list_display = ('__str__', 'user')
     list_editable = ('user',)
     list_filter = ('author',)

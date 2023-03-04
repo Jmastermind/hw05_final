@@ -19,7 +19,13 @@ class PostCreateFormTests(TestCase):
     @classmethod
     @wrap_testdata
     def setUpTestData(cls):
-        cls.user, cls.auth = mixer.blend(User), Client()
+        cls.group = mixer.blend(Group)
+        cls.user = mixer.blend(User)
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.auth = Client()
         cls.auth.force_login(cls.user)
 
     @classmethod
@@ -29,38 +35,38 @@ class PostCreateFormTests(TestCase):
 
     def test_create_post(self) -> None:
         """Валидная форма создает новый пост."""
-        group = mixer.blend(Group)
         data = {
-            'text': 'Тестовый текст',
-            'group': group.pk,
+            'text': Faker().text(),
+            'group': self.group.pk,
             'image': get_image('image_1.gif'),
         }
-        response = self.auth.post(
+        self.auth.post(
             reverse('posts:post_create'),
             data=data,
             follow=True,
         )
-        self.assertRedirects(
-            response,
-            reverse('posts:profile', args=(self.user.username,)),
-        )
-        posts_count = response.context['page_obj'].__len__()
         self.assertEqual(
-            posts_count,
+            Post.objects.all().count(),
             1,
-            f'Неверное количество постов ({posts_count}) '
+            'Неверное количество постов'
             'после отправки валидной формы',
         )
+        post = Post.objects.get()
         fields = (
             (
-                response.context['post'].group.pk,
-                group.pk,
+                post.group.pk,
+                self.group.pk,
                 'У созданного поста неправильная группа',
             ),
             (
-                response.context['post'].text,
+                post.text,
                 data['text'],
                 'У созданного поста неправильный текст',
+            ),
+            (
+                post.image.size,
+                data['image'].size,
+                'У созданного поста неправильное изображение',
             ),
         )
         for field, expected, message in fields:
@@ -73,35 +79,31 @@ class PostCreateFormTests(TestCase):
 
     def test_edit_post(self) -> None:
         """Валидная форма сохраняет изменения в посте."""
-        group = mixer.blend(Group)
-        post = mixer.blend(Post, group=group, author=self.user)
+        post = mixer.blend(Post, group=self.group, author=self.user)
         data = {
-            'text': 'Текст изменен',
+            'text': Faker().text(),
             'group': '',
             'image': get_image('image_2.gif'),
         }
-        response = self.auth.post(
+        self.auth.post(
             reverse('posts:post_edit', args=(post.pk,)),
             data=data,
             follow=True,
         )
-        self.assertRedirects(
-            response,
-            reverse('posts:post_detail', args=(post.pk,)),
-        )
+        get_post = Post.objects.get()
         fields = (
             (
-                response.context['post'].group,
+                get_post.group,
                 None,
                 'У измененного поста неправильная группа',
             ),
             (
-                response.context['post'].text,
+                get_post.text,
                 data['text'],
                 'У измененного поста неправильный текст',
             ),
             (
-                response.context['post'].image.size,
+                get_post.image.size,
                 data['image'].size,
                 'У измененного поста неправильная картинка',
             ),
@@ -118,33 +120,58 @@ class PostCreateFormTests(TestCase):
         """Аноним не создаёт пост."""
         self.client.post(
             reverse('posts:post_create'),
-            data={'text': 'Анонимный текст'},
+            data={'text': Faker().text()},
             follow=True,
         )
         self.assertEqual(
             Post.objects.count(),
             0,
-            f'Неверное количество постов ({Post.objects.count()}) '
+            'Неверное количество постов'
             'после создания поста анонимом',
         )
 
     def test_guest_cant_edit_post(self) -> None:
         """Аноним не редактирует пост."""
-        post = mixer.blend(Post, author=self.user, image=None)
+        post = mixer.blend(Post, author=self.user)
+        data = {
+            'text': Faker().text(),
+            'group': '',
+            'image': get_image('image.gif'),
+        }
         self.client.post(
             reverse('posts:post_edit', args=(post.pk,)),
-            data={'text': 'Анонимное изменение'},
+            data=data,
             follow=True,
         )
-        self.assertEqual(
-            Post.objects.get().text,
-            post.text,
-            'Текст поста был изменен анонимом',
+        get_post = Post.objects.get()
+        fields = (
+            (
+                get_post.group,
+                post.group,
+                'У измененного поста неправильная группа',
+            ),
+            (
+                get_post.text,
+                post.text,
+                'У измененного поста неправильный текст',
+            ),
+            (
+                get_post.image,
+                post.image,
+                'У измененного поста неправильная картинка',
+            ),
         )
+        for field, expected, message in fields:
+            with self.subTest(field=field, expected=expected):
+                self.assertEqual(
+                    field,
+                    expected,
+                    message,
+                )
 
     def test_not_author_edit_post(self) -> None:
         """Не автор не редактирует пост."""
-        user, auth = mixer.blend(User, username='tester_2'), Client()
+        user, auth = mixer.blend(User), Client()
         auth.force_login(user)
         post = mixer.blend(Post, author=self.user, image=None)
         auth.post(
@@ -212,7 +239,12 @@ class FollowTests(TestCase):
     @wrap_testdata
     def setUpTestData(cls):
         cls.author = mixer.blend(User)
-        cls.follower, cls.follower_client = mixer.blend(User), Client()
+        cls.follower = mixer.blend(User)
+
+    @classmethod
+    def setUpClass(cls):
+        super().setUpClass()
+        cls.follower_client = Client()
         cls.follower_client.force_login(cls.follower)
 
     def test_follow(self) -> None:

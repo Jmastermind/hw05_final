@@ -1,6 +1,9 @@
 from behaviors.behaviors import Timestamped
+from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.db import models
+
+from core.utils import truncate
 
 
 class DefaultModel(models.Model):
@@ -12,13 +15,6 @@ class DefaultModel(models.Model):
 
 class TimestampedModel(DefaultModel, Timestamped):
     """Абстрактная модель для моделей с датами."""
-
-    def __init__(self, *args, **kwargs) -> None:
-        super().__init__(*args, **kwargs)
-        self._meta.get_field('created').verbose_name = 'дата создания'
-        self._meta.get_field('created').help_text = 'дата создания'
-        self._meta.get_field('modified').verbose_name = 'дата изменения'
-        self._meta.get_field('modified').help_text = 'дата изменения'
 
     class Meta:
         abstract = True
@@ -39,3 +35,7 @@ class AuthoredModel(TimestampedModel):
 
     class Meta:
         abstract = True
+        ordering = ('-created',)
+
+    def __str__(self) -> str:
+        return truncate(self.text, settings.TRUNCATION)
